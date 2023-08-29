@@ -44,11 +44,13 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("filename", help="Name of the input file")
 parser.add_argument("--test", help="Only translate the first 3 short texts", action="store_true")
-parser.add_argument("-o", "--option", help="add instruction for gpt")
+parser.add_argument("-o", "--option", help="Optional instruction for the GPT model", default="")
 args = parser.parse_args()
+
 
 # 获取命令行参数
 filename = args.filename
+option = args.option
 base_filename, file_extension = os.path.splitext(filename)
 new_filenametxt = base_filename + "_translated.srt"
 new_filenametxt2 = base_filename + "_translated_bilingual.srt"
@@ -101,19 +103,18 @@ def is_translation_valid(original_text, translated_text):
     print(translated_text, translated_index_lines)
 
     return original_index_lines == translated_index_lines
-def translate_text(text, tone):
+def translate_text(text, option):
     max_retries = 3
     retries = 0
     
     while retries < max_retries:
         try:
-            tone_instruction = tone
             completion = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {
                         "role": "user",
-                        "content": f"Translate the following subtitle text into {language_name} {tone_instruction}, but keep the subtitle number and timeline unchanged: \n{text}",
+                        "content": f"Translate the following subtitle text into {language_name}, but keep the subtitle number and timeline unchanged while {option}: \n{text}",
                     }
                 ],
             )
@@ -141,7 +142,7 @@ def translate_text(text, tone):
     print(f"Unable to get a valid translation after {max_retries} retries. Returning the original text.")
     return text
     
-def translate_and_store(text):
+def translate_and_store(text, option):
     
 
     # 如果文本已经翻译过，直接返回翻译结果
@@ -149,7 +150,7 @@ def translate_and_store(text):
         return translated_dict[text]
 
     # 否则，调用 translate_text 函数进行翻译，并将结果存储在字典中
-    translated_text = translate_text(text)
+    translated_text = translate_text(text, option)
     translated_dict[text] = translated_text
 
     # 将字典保存为 JSON 文件
@@ -193,7 +194,7 @@ translated_text = ""
 for short_text in tqdm(short_text_list):
     print((short_text))
     # 翻译当前短文本
-    translated_short_text = translate_and_store(short_text)
+    translated_short_text = translate_and_store(short_text, option)
     
     
     # 将当前短文本和翻译后的文本加入总文本中
